@@ -1,0 +1,21 @@
+# Chat export files
+chat-*.md
+chat-*.txt
+chat-*.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

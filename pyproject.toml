@@ -1,0 +1,22 @@
+[project]
+name = "predictive-maintenance"
+version = "0.1.0"
+description = "Predictive Maintenance for Manufacturing Equipment using PyTorch"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "torch",
+    "scikit-learn",
+    "imbalanced-learn",
+    "optuna",
+    "torchinfo",
+    "kagglehub",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
