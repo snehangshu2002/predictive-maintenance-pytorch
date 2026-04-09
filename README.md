@@ -1,246 +1,126 @@
 # Predictive Maintenance for Manufacturing Equipment
 
-A PyTorch-based binary classification project that predicts machine failure using the **AI4I 2020 Predictive Maintenance Dataset**. The model uses SMOTE for class balancing, a feedforward neural network for prediction, and comprehensive evaluation metrics.
+Notebook-first PyTorch project for binary machine-failure prediction on the AI4I 2020 dataset.
 
----
+The notebook implements two stages:
+- A baseline ANN with fixed hyperparameters
+- An Optuna-tuned ANN, then checkpoint export and inference helpers
 
-## Table of Contents
+## Project Objective
 
-- [Overview](#overview)
-- [Dataset](#dataset)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Model Training](#model-training)
-- [Evaluation](#evaluation)
-- [Results](#results)
-- [Dependencies](#dependencies)
-- [References](#references)
+Build a reliable binary classification system that predicts machine failure early from sensor and operational features, so maintenance can be scheduled proactively and unplanned downtime can be reduced.
 
----
+Key goals:
+- Handle severe class imbalance using SMOTE
+- Improve failure detection quality beyond accuracy alone (precision/recall/F1)
+- Use Optuna to tune ANN hyperparameters for better generalization
+- Export a reusable PyTorch checkpoint for real-world inference
 
-## Overview
+## What is in `Predictive.ipynb`
 
-Manufacturing equipment failures are costly in terms of downtime and repair expenses. This project builds a neural network model that predicts whether a machine will fail based on sensor readings and operational parameters. The key challenge is the **severe class imbalance** (~3% failure rate), addressed using **SMOTE** oversampling.
+1. Data loading and inspection
+2. Train/test split with stratification
+3. Label encoding for `Type`
+4. SMOTE on training data only
+5. Feature scaling with `StandardScaler`
+6. Baseline model training and evaluation
+7. Optuna search (`n_trials=20`) for ANN hyperparameters
+8. Best model retraining, checkpoint save, reload, and prediction examples
 
----
+## Model and Tuning Details
+
+PyTorch baseline model:
+- Framework: `torch` / `torch.nn`
+- Architecture: `11 -> 128 -> 64 -> 1`
+- Activations: `ReLU`
+- Regularization: `Dropout(0.3)`
+- Loss: `BCEWithLogitsLoss`
+- Optimizer: `AdamW`
+- Baseline training setup: `epochs=100`, `batch_size=32`, `learning_rate=0.001`
+
+Optuna hyperparameter tuning:
+- Study direction: maximize validation accuracy
+- Sampler: `TPESampler`
+- Trials: `20`
+- Early stopping + pruning used during tuning
+- Tuned parameters include:
+  - `num_hidden_layers`
+  - `neurons_per_layer`
+  - `epochs`
+  - `learning_rate`
+  - `dropout_rate`
+  - `batch_size`
+  - `optimizer` (`Adam`, `SGD`, `RMSprop`)
+  - `weight_decay`
 
 ## Dataset
 
-| Property | Value |
-|----------|-------|
-| **Source** | [AI4I 2020 Predictive Maintenance Dataset (Kaggle)](https://www.kaggle.com/datasets/stephanmatzka/predictive-maintenance-dataset-ai4i-2020) |
-| **Samples** | 10,000 |
-| **Classes** | Binary (0 = No Failure, 1 = Failure) |
-| **Imbalance** | 9,661 : 339 (~96.6% : 3.4%) |
+- Source: [AI4I 2020 Predictive Maintenance Dataset](https://www.kaggle.com/datasets/stephanmatzka/predictive-maintenance-dataset-ai4i-2020)
+- Samples: 10,000
+- Target: `Machine failure` (0/1)
+- Imbalance: about 3.4% failures
 
-### Features (11 total)
+Feature columns used by the model:
+- `Type`
+- `Air temperature [K]`
+- `Process temperature [K]`
+- `Rotational speed [rpm]`
+- `Torque [Nm]`
+- `Tool wear [min]`
+- `TWF`, `HDF`, `PWF`, `OSF`, `RNF`
 
-| Feature | Type | Description |
-|---------|------|-------------|
-| `Type` | Categorical | Machine type (L, M, H) — label encoded |
-| `Air temperature [K]` | Continuous | Ambient air temperature in Kelvin |
-| `Process temperature [K]` | Continuous | Process temperature in Kelvin |
-| `Rotational speed [rpm]` | Integer | Machine rotational speed |
-| `Torque [Nm]` | Continuous | Torque applied in Newton-meters |
-| `Tool wear [min]` | Integer | Tool wear duration in minutes |
-| `TWF` | Binary | Tool Wear Failure flag |
-| `HDF` | Binary | Heat Dissipation Failure flag |
-| `PWF` | Binary | Power Failure flag |
-| `OSF` | Binary | Overstrain Failure flag |
-| `RNF` | Binary | Random Failure flag |
+## Current Notebook Metrics (latest saved outputs)
 
----
+Baseline model:
+- Accuracy: `0.9645`
+- Precision: `0.4891`
+- Recall: `0.9853`
+- F1: `0.6537`
 
-## Features
+Optuna-selected model evaluation:
+- Accuracy: `0.9815`
+- Precision: `0.6535`
+- Recall: `0.9706`
+- F1: `0.7811`
 
-- **SMOTE oversampling** to balance the training set (7,729 : 7,729 after resampling)
-- **Stratified train/test split** (80/20) preserving the failure ratio
-- **Standard Scaling** applied after SMOTE to prevent data leakage
-- **Feedforward Neural Network** with Dropout regularization
-- **Binary Cross-Entropy** loss with `BCEWithLogitsLoss`
-- **Comprehensive evaluation**: Accuracy, Precision, Recall, F1-Score, Confusion Matrix
-
----
-
-## Architecture
-
-```
-Input (11 features)
-        │
-        ▼
-  Linear(11 → 128)
-        │
-        ▼
-    ReLU + Dropout(0.3)
-        │
-        ▼
-  Linear(128 → 64)
-        │
-        ▼
-    ReLU + Dropout(0.3)
-        │
-        ▼
-   Linear(64 → 1)     ← Single logit output
-        │
-        ▼
-  torch.sigmoid()     ← During inference only
-        │
-        ▼
-  Threshold (≥ 0.5)   ← Binary prediction
-```
-
----
+Best Optuna trial reported:
+- Trial: `10`
+- Best validation accuracy during tuning: `0.9985`
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.10+
-- pip
-
-### Setup
+From this project folder:
 
 ```bash
-# Clone or navigate to the project directory
-cd "Predictive Maintenance for Manufacturing Equipment.ipynb"
-
-# Install all dependencies
 pip install -e .
-
-# Or install manually
-pip install pandas numpy matplotlib seaborn torch scikit-learn imbalanced-learn optuna torchinfo kagglehub
 ```
 
----
+Optional (only if you want KaggleHub dataset download flow):
 
-## Usage
+```bash
+pip install -e ".[data]"
+```
 
-Open the Jupyter notebook and run all cells sequentially:
+## Run
 
 ```bash
 jupyter notebook Predictive.ipynb
 ```
 
-The notebook executes the full pipeline:
+## Path Note (important)
 
-1. Load & preprocess data
-2. Apply SMOTE to training set
-3. Scale features
-4. Build & train the neural network
-5. Evaluate on the held-out test set
+The notebook currently reads/saves files using Google Drive Colab-style paths such as:
+- `/content/drive/MyDrive/.../ai4i2020_saved.csv`
+- `/content/drive/MyDrive/.../best_predictive_model.pth`
 
----
+If you run locally, update those paths to local files in this repository:
+- `ai4i2020_saved.csv`
+- `best_predictive_model.pth`
 
-## Project Structure
+## Project Files
 
-```
-Predictive Maintenance for Manufacturing Equipment.ipynb/
-├── Predictive.ipynb                        # Main notebook
-├── ai4i2020_saved.csv                      # Dataset file
-├── pyproject.toml                          # Project dependencies
-├── README.md                               # This file
-├── .gitignore                              # Ignored files
-└── chat-PyTorch Binary Classification Guide.md  # AI Q&A guide (not tracked)
-```
-
----
-
-## Model Training
-
-| Hyperparameter | Value |
-|----------------|-------|
-| **Optimizer** | AdamW |
-| **Loss** | `BCEWithLogitsLoss` |
-| **Batch size** | 32 |
-| **Epochs** | 100 |
-| **Learning rate** | Default (AdamW) |
-| **Dropout rate** | 0.3 |
-| **Activation** | ReLU |
-| **Random seed** | 42 |
-
-### Training Loop
-
-```python
-for epoch in range(epochs):
-    total_epoch_loss = 0
-    for batch_features, batch_labels in train_loader:
-        outputs = model(batch_features).view(-1)
-        loss = criterion(outputs, batch_labels.float())
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        total_epoch_loss += loss.item()
-    avg_loss = total_epoch_loss / len(train_loader)
-```
-
----
-
-## Evaluation
-
-The model is evaluated on the **unseen test set** (not touched by SMOTE) using:
-
-| Metric | Description |
-|--------|-------------|
-| **Accuracy** | Overall correct prediction rate |
-| **Precision** | Of predicted failures, how many were real? |
-| **Recall** | Of actual failures, how many did we catch? |
-| **F1-Score** | Harmonic mean of precision and recall |
-| **Confusion Matrix** | TP / FP / TN / FN breakdown |
-
-```python
-with torch.no_grad():
-    model.eval()
-    for X_batch, y_batch in test_loader:
-        outputs = model(X_batch).view(-1)
-        predicted = (torch.sigmoid(outputs) > 0.5).long()
-        # Collect all_preds and all_labels
-```
-
----
-
-## Results
-
-> **Note**: Results depend on training configuration and random seed. See the notebook for actual output.
-
-### Common Challenge
-
-Due to extreme class imbalance, the model may learn the "lazy" strategy of always predicting class 0 (no failure), yielding high accuracy but zero precision/recall for the failure class. Potential remedies:
-
-- Increase training epochs
-- Adjust learning rate
-- Add `pos_weight` to the loss function
-- Tune the classification threshold (e.g., 0.3 instead of 0.5)
-- Use focal loss or cost-sensitive learning
-
----
-
-## Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `pandas` | Data loading & manipulation |
-| `numpy` | Numerical operations |
-| `matplotlib` | Plotting & visualization |
-| `seaborn` | Statistical visualization (confusion matrix heatmap) |
-| `torch` | Neural network framework |
-| `scikit-learn` | Train/test split, scaling, evaluation metrics |
-| `imbalanced-learn` | SMOTE oversampling |
-| `optuna` | Hyperparameter tuning (available for future use) |
-| `torchinfo` | Model architecture summary |
-| `kagglehub` | Dataset download from Kaggle |
-
----
-
-## References
-
-- [AI4I 2020 Dataset Paper](https://www.mdpi.com/2504-4494/4/3/35)
-- [SMOTE Paper — Chawla et al. (2002)](https://arxiv.org/abs/1106.1813)
-- [PyTorch Documentation](https://pytorch.org/docs/)
-- [Scikit-learn Metrics](https://scikit-learn.org/stable/modules/model_evaluation.html)
-
----
-
-*Built with PyTorch · AI4I 2020 Dataset · SMOTE Balanced*
+- `Predictive.ipynb`: main end-to-end workflow
+- `ai4i2020_saved.csv`: dataset copy
+- `best_predictive_model.pth`: trained checkpoint artifact
+- `pyproject.toml`: package/dependency metadata
+- `README.md`: project documentation
