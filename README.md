@@ -1,6 +1,6 @@
 # Predictive Maintenance for Manufacturing Equipment
 
-Notebook-first PyTorch project for binary machine-failure prediction on the AI4I 2020 dataset.
+This PyTorch project for binary machine-failure prediction on the AI4I 2020 dataset.
 
 The notebook implements two stages:
 - A baseline ANN with fixed hyperparameters
